@@ -1,7 +1,7 @@
 Top Snackbar
 ==========================
 
-[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-TSnackBar-brightgreen.svg?style=flat)](http://android-arsenal.com/details/1/2779)
+[![](https://jitpack.io/v/ALXKAY/TSnackBar.svg)](https://jitpack.io/#ALXKAY/TSnackBar)
 
 Show a Snackbar from the top. A big thanks to https://github.com/ejohansson, https://github.com/antoninovitale, https://github.com/hansonchris and everyone that took the time to make pull requests. 
 
@@ -16,7 +16,7 @@ Icons support:
 ### Installation (app's build.gradle):
 
 ~~~~ groovy
-compile 'com.androidadvance:topsnackbar:$version'
+implementation 'com.github.ALXKAY:TSnackBar:1.9.1'
 ~~~~
 
 ### How to use it (a tutorial starting from **simple usage** to **complex one**):
