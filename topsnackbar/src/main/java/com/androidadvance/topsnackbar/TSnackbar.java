@@ -14,16 +14,6 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.support.annotation.ColorInt;
-import android.support.annotation.DrawableRes;
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
-import android.support.annotation.StringRes;
-import android.support.design.widget.CoordinatorLayout;
-import android.support.design.widget.SwipeDismissBehavior;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.view.ViewPropertyAnimatorListenerAdapter;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
@@ -38,7 +28,18 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toolbar;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.DrawableRes;
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
+
+import com.google.android.material.behavior.SwipeDismissBehavior;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -46,51 +47,11 @@ import java.lang.annotation.RetentionPolicy;
 
 public final class TSnackbar {
 
-    public static abstract class Callback {
-
-        public static final int DISMISS_EVENT_SWIPE = 0;
-
-        public static final int DISMISS_EVENT_ACTION = 1;
-
-        public static final int DISMISS_EVENT_TIMEOUT = 2;
-
-        public static final int DISMISS_EVENT_MANUAL = 3;
-
-        public static final int DISMISS_EVENT_CONSECUTIVE = 4;
-
-        @IntDef({
-                DISMISS_EVENT_SWIPE, DISMISS_EVENT_ACTION, DISMISS_EVENT_TIMEOUT,
-                DISMISS_EVENT_MANUAL, DISMISS_EVENT_CONSECUTIVE
-        })
-
-        @Retention(RetentionPolicy.SOURCE)
-        public @interface DismissEvent {
-
-        }
-
-        public void onDismissed(TSnackbar snackbar, @DismissEvent int event) {
-
-        }
-
-        public void onShown(TSnackbar snackbar) {
-
-        }
-    }
-
-    @IntDef({LENGTH_INDEFINITE, LENGTH_SHORT, LENGTH_LONG})
-    @Retention(RetentionPolicy.SOURCE)
-    public @interface Duration {
-    }
-
     public static final int LENGTH_INDEFINITE = -2;
-
     public static final int LENGTH_SHORT = -1;
-
     public static final int LENGTH_LONG = 0;
-
     private static final int ANIMATION_DURATION = 250;
     private static final int ANIMATION_FADE_DURATION = 180;
-
     private static final Handler sHandler;
     private static final int MSG_SHOW = 0;
     private static final int MSG_DISMISS = 1;
@@ -115,8 +76,21 @@ public final class TSnackbar {
     private final ViewGroup mParent;
     private final Context mContext;
     private final SnackbarLayout mView;
+    private final SnackbarManager.Callback mManagerCallback = new SnackbarManager.Callback() {
+        @Override
+        public void show() {
+            sHandler.sendMessage(sHandler.obtainMessage(MSG_SHOW, TSnackbar.this));
+        }
+
+        @Override
+        public void dismiss(int event) {
+            sHandler.sendMessage(sHandler.obtainMessage(MSG_DISMISS, event, 0, TSnackbar.this));
+        }
+    };
     private int mDuration;
     private Callback mCallback;
+    private Animation viewInAnimation;
+    private Animation viewOutAnimation;
 
     private TSnackbar(ViewGroup parent) {
         mParent = parent;
@@ -150,7 +124,7 @@ public final class TSnackbar {
                 } else {
                     fallback = (ViewGroup) view;
                 }
-            } else if (view instanceof android.support.v7.widget.Toolbar || view instanceof Toolbar) {
+            } else if (view instanceof androidx.appcompat.widget.Toolbar) {
                 /*
                     If we return the toolbar here, the toast will be attached inside the toolbar.
                     So we need to find a some sibling ViewGroup to the toolbar that comes after the toolbar
@@ -192,6 +166,33 @@ public final class TSnackbar {
         } while (view != null);
 
         return fallback;
+    }
+
+    private static float convertDpToPixel(float dp, Context context) {
+        Resources resources = context.getResources();
+        DisplayMetrics metrics = resources.getDisplayMetrics();
+        float px = dp * ((float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT);
+        return px;
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private static Bitmap getBitmap(VectorDrawable vectorDrawable) {
+        Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
+                vectorDrawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        vectorDrawable.draw(canvas);
+        return bitmap;
+    }
+
+    private static Bitmap getBitmap(Drawable drawable) {
+        if (drawable instanceof BitmapDrawable) {
+            return ((BitmapDrawable) drawable).getBitmap();
+        } else if (drawable instanceof VectorDrawableCompat) {
+            return getBitmap(drawable);
+        } else {
+            throw new IllegalArgumentException("unsupported drawable type");
+        }
     }
 
     @Deprecated
@@ -264,33 +265,6 @@ public final class TSnackbar {
         return drawable;
     }
 
-    private static float convertDpToPixel(float dp, Context context) {
-        Resources resources = context.getResources();
-        DisplayMetrics metrics = resources.getDisplayMetrics();
-        float px = dp * ((float) metrics.densityDpi / DisplayMetrics.DENSITY_DEFAULT);
-        return px;
-    }
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private static Bitmap getBitmap(VectorDrawable vectorDrawable) {
-        Bitmap bitmap = Bitmap.createBitmap(vectorDrawable.getIntrinsicWidth(),
-                vectorDrawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bitmap);
-        vectorDrawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-        vectorDrawable.draw(canvas);
-        return bitmap;
-    }
-
-    private static Bitmap getBitmap(Drawable drawable) {
-        if (drawable instanceof BitmapDrawable) {
-            return ((BitmapDrawable) drawable).getBitmap();
-        } else if (drawable instanceof VectorDrawable) {
-            return getBitmap((VectorDrawable) drawable);
-        } else {
-            throw new IllegalArgumentException("unsupported drawable type");
-        }
-    }
-
     @NonNull
     public TSnackbar setAction(@StringRes int resId, View.OnClickListener listener) {
         return setAction(mContext.getText(resId), listener);
@@ -315,7 +289,7 @@ public final class TSnackbar {
                 @Override
                 public void onClick(View view) {
                     listener.onClick(view);
-                    if(shouldDismissOnClick) {
+                    if (shouldDismissOnClick) {
                         dispatchDismiss(Callback.DISMISS_EVENT_ACTION);
                     }
                 }
@@ -338,7 +312,6 @@ public final class TSnackbar {
         return this;
     }
 
-
     @NonNull
     public TSnackbar setText(@NonNull CharSequence message) {
         final TextView tv = mView.getMessageView();
@@ -346,21 +319,20 @@ public final class TSnackbar {
         return this;
     }
 
-
     @NonNull
     public TSnackbar setText(@StringRes int resId) {
         return setText(mContext.getText(resId));
+    }
+
+    @Duration
+    public int getDuration() {
+        return mDuration;
     }
 
     @NonNull
     public TSnackbar setDuration(@Duration int duration) {
         mDuration = duration;
         return this;
-    }
-
-    @Duration
-    public int getDuration() {
-        return mDuration;
     }
 
     @NonNull
@@ -397,18 +369,6 @@ public final class TSnackbar {
         return SnackbarManager.getInstance()
                 .isCurrentOrNext(mManagerCallback);
     }
-
-    private final SnackbarManager.Callback mManagerCallback = new SnackbarManager.Callback() {
-        @Override
-        public void show() {
-            sHandler.sendMessage(sHandler.obtainMessage(MSG_SHOW, TSnackbar.this));
-        }
-
-        @Override
-        public void dismiss(int event) {
-            sHandler.sendMessage(sHandler.obtainMessage(MSG_DISMISS, event, 0, TSnackbar.this));
-        }
-    };
 
     final void showView() {
         if (mView.getParent() == null) {
@@ -478,95 +438,66 @@ public final class TSnackbar {
         }
     }
 
+    @NonNull
+    public TSnackbar setAnimation(Animation viewInAnimation, Animation viewOutAnimation) {
+        this.viewInAnimation = viewInAnimation;
+        this.viewOutAnimation = viewOutAnimation;
+        return this;
+    }
+
     private void animateViewIn() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            ViewCompat.setTranslationY(mView, -mView.getHeight());
-            ViewCompat.animate(mView)
-                    .translationY(0f)
-                    .setInterpolator(com.androidadvance.topsnackbar.AnimationUtils.FAST_OUT_SLOW_IN_INTERPOLATOR)
-                    .setDuration(ANIMATION_DURATION)
-                    .setListener(new ViewPropertyAnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationStart(View view) {
-                            mView.animateChildrenIn(ANIMATION_DURATION - ANIMATION_FADE_DURATION,
-                                    ANIMATION_FADE_DURATION);
-                        }
 
-                        @Override
-                        public void onAnimationEnd(View view) {
-                            if (mCallback != null) {
-                                mCallback.onShown(TSnackbar.this);
-                            }
-                            SnackbarManager.getInstance()
-                                    .onShown(mManagerCallback);
-                        }
-                    })
-                    .start();
-        } else {
-            Animation anim = AnimationUtils.loadAnimation(mView.getContext(),
+        if (viewInAnimation == null) {
+            viewInAnimation = AnimationUtils.loadAnimation(mView.getContext(),
                     R.anim.top_in);
-            anim.setInterpolator(com.androidadvance.topsnackbar.AnimationUtils.FAST_OUT_SLOW_IN_INTERPOLATOR);
-            anim.setDuration(ANIMATION_DURATION);
-            anim.setAnimationListener(new Animation.AnimationListener() {
-                @Override
-                public void onAnimationEnd(Animation animation) {
-                    if (mCallback != null) {
-                        mCallback.onShown(TSnackbar.this);
-                    }
-                    SnackbarManager.getInstance()
-                            .onShown(mManagerCallback);
-                }
-
-                @Override
-                public void onAnimationStart(Animation animation) {
-                }
-
-                @Override
-                public void onAnimationRepeat(Animation animation) {
-                }
-            });
-            mView.startAnimation(anim);
         }
+
+        viewInAnimation.setInterpolator(com.androidadvance.topsnackbar.AnimationUtils.FAST_OUT_SLOW_IN_INTERPOLATOR);
+        viewInAnimation.setDuration(ANIMATION_DURATION);
+        viewInAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                if (mCallback != null) {
+                    mCallback.onShown(TSnackbar.this);
+                }
+                SnackbarManager.getInstance()
+                        .onShown(mManagerCallback);
+            }
+
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+        });
+        mView.startAnimation(viewInAnimation);
     }
 
     private void animateViewOut(final int event) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-            ViewCompat.animate(mView)
-                    .translationY(-mView.getHeight())
-                    .setInterpolator(com.androidadvance.topsnackbar.AnimationUtils.FAST_OUT_SLOW_IN_INTERPOLATOR)
-                    .setDuration(ANIMATION_DURATION)
-                    .setListener(new ViewPropertyAnimatorListenerAdapter() {
-                        @Override
-                        public void onAnimationStart(View view) {
-                            mView.animateChildrenOut(0, ANIMATION_FADE_DURATION);
-                        }
 
-                        @Override
-                        public void onAnimationEnd(View view) {
-                            onViewHidden(event);
-                        }
-                    })
-                    .start();
-        } else {
-            Animation anim = AnimationUtils.loadAnimation(mView.getContext(), R.anim.top_out);
-            anim.setInterpolator(com.androidadvance.topsnackbar.AnimationUtils.FAST_OUT_SLOW_IN_INTERPOLATOR);
-            anim.setDuration(ANIMATION_DURATION);
-            anim.setAnimationListener(new Animation.AnimationListener() {
-                @Override
-                public void onAnimationEnd(Animation animation) {
-                    onViewHidden(event);
-                }
-
-                @Override
-                public void onAnimationStart(Animation animation) {
-                }
-
-                @Override
-                public void onAnimationRepeat(Animation animation) {
-                }
-            });
-            mView.startAnimation(anim);
+        if (viewOutAnimation == null) {
+            viewOutAnimation = AnimationUtils.loadAnimation(mView.getContext(), R.anim.top_out);
         }
+
+        viewOutAnimation.setInterpolator(com.androidadvance.topsnackbar.AnimationUtils.FAST_OUT_SLOW_IN_INTERPOLATOR);
+        viewOutAnimation.setDuration(ANIMATION_DURATION);
+        viewOutAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                onViewHidden(event);
+            }
+
+            @Override
+            public void onAnimationStart(Animation animation) {
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+            }
+        });
+        mView.startAnimation(viewOutAnimation);
     }
 
     final void hideView(int event) {
@@ -607,23 +538,48 @@ public final class TSnackbar {
         return false;
     }
 
+    @IntDef({LENGTH_INDEFINITE, LENGTH_SHORT, LENGTH_LONG})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface Duration {
+    }
+
+    public static abstract class Callback {
+
+        public static final int DISMISS_EVENT_SWIPE = 0;
+
+        public static final int DISMISS_EVENT_ACTION = 1;
+
+        public static final int DISMISS_EVENT_TIMEOUT = 2;
+
+        public static final int DISMISS_EVENT_MANUAL = 3;
+
+        public static final int DISMISS_EVENT_CONSECUTIVE = 4;
+
+        public void onDismissed(TSnackbar snackbar, @DismissEvent int event) {
+
+        }
+
+        public void onShown(TSnackbar snackbar) {
+
+        }
+
+        @IntDef({
+                DISMISS_EVENT_SWIPE, DISMISS_EVENT_ACTION, DISMISS_EVENT_TIMEOUT,
+                DISMISS_EVENT_MANUAL, DISMISS_EVENT_CONSECUTIVE
+        })
+
+        @Retention(RetentionPolicy.SOURCE)
+        public @interface DismissEvent {
+
+        }
+    }
+
     public static class SnackbarLayout extends LinearLayout {
         private TextView mMessageView;
         private Button mActionView;
 
         private int mMaxWidth;
         private int mMaxInlineActionWidth;
-
-        interface OnLayoutChangeListener {
-            void onLayoutChange(View view, int left, int top, int right, int bottom);
-        }
-
-        interface OnAttachStateChangeListener {
-            void onViewAttachedToWindow(View v);
-
-            void onViewDetachedFromWindow(View v);
-        }
-
         private OnLayoutChangeListener mOnLayoutChangeListener;
         private OnAttachStateChangeListener mOnAttachStateChangeListener;
 
@@ -651,6 +607,17 @@ public final class TSnackbar {
 
             ViewCompat.setAccessibilityLiveRegion(this,
                     ViewCompat.ACCESSIBILITY_LIVE_REGION_POLITE);
+        }
+
+        private static void updateTopBottomPadding(View view, int topPadding, int bottomPadding) {
+            if (ViewCompat.isPaddingRelative(view)) {
+                ViewCompat.setPaddingRelative(view,
+                        ViewCompat.getPaddingStart(view), topPadding,
+                        ViewCompat.getPaddingEnd(view), bottomPadding);
+            } else {
+                view.setPadding(view.getPaddingLeft(), topPadding,
+                        view.getPaddingRight(), bottomPadding);
+            }
         }
 
         @Override
@@ -786,15 +753,14 @@ public final class TSnackbar {
             return changed;
         }
 
-        private static void updateTopBottomPadding(View view, int topPadding, int bottomPadding) {
-            if (ViewCompat.isPaddingRelative(view)) {
-                ViewCompat.setPaddingRelative(view,
-                        ViewCompat.getPaddingStart(view), topPadding,
-                        ViewCompat.getPaddingEnd(view), bottomPadding);
-            } else {
-                view.setPadding(view.getPaddingLeft(), topPadding,
-                        view.getPaddingRight(), bottomPadding);
-            }
+        interface OnLayoutChangeListener {
+            void onLayoutChange(View view, int left, int top, int right, int bottom);
+        }
+
+        interface OnAttachStateChangeListener {
+            void onViewAttachedToWindow(View v);
+
+            void onViewDetachedFromWindow(View v);
         }
     }
 

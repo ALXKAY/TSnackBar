@@ -33,17 +33,8 @@ class SnackbarManager {
     private static final int LONG_DURATION_MS = 2750;
 
     private static SnackbarManager sSnackbarManager;
-
-    static SnackbarManager getInstance() {
-        if (sSnackbarManager == null) {
-            sSnackbarManager = new SnackbarManager();
-        }
-        return sSnackbarManager;
-    }
-
     private final Object mLock;
     private final Handler mHandler;
-
     private SnackbarRecord mCurrentSnackbar;
     private SnackbarRecord mNextSnackbar;
 
@@ -62,10 +53,11 @@ class SnackbarManager {
         });
     }
 
-    interface Callback {
-        void show();
-
-        void dismiss(int event);
+    static SnackbarManager getInstance() {
+        if (sSnackbarManager == null) {
+            sSnackbarManager = new SnackbarManager();
+        }
+        return sSnackbarManager;
     }
 
     public void show(int duration, Callback callback) {
@@ -165,20 +157,6 @@ class SnackbarManager {
         }
     }
 
-    private static class SnackbarRecord {
-        private final WeakReference<Callback> callback;
-        private int duration;
-
-        SnackbarRecord(int duration, Callback callback) {
-            this.callback = new WeakReference<>(callback);
-            this.duration = duration;
-        }
-
-        boolean isSnackbar(Callback callback) {
-            return callback != null && this.callback.get() == callback;
-        }
-    }
-
     private void showNextSnackbarLocked() {
         if (mNextSnackbar != null) {
             mCurrentSnackbar = mNextSnackbar;
@@ -232,6 +210,26 @@ class SnackbarManager {
             if (mCurrentSnackbar == record || mNextSnackbar == record) {
                 cancelSnackbarLocked(record, TSnackbar.Callback.DISMISS_EVENT_TIMEOUT);
             }
+        }
+    }
+
+    interface Callback {
+        void show();
+
+        void dismiss(int event);
+    }
+
+    private static class SnackbarRecord {
+        private final WeakReference<Callback> callback;
+        private int duration;
+
+        SnackbarRecord(int duration, Callback callback) {
+            this.callback = new WeakReference<>(callback);
+            this.duration = duration;
+        }
+
+        boolean isSnackbar(Callback callback) {
+            return callback != null && this.callback.get() == callback;
         }
     }
 

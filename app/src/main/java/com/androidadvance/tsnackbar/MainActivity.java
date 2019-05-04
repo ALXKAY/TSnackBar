@@ -3,12 +3,15 @@ package com.androidadvance.tsnackbar;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.ScaleAnimation;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.androidadvance.topsnackbar.TSnackbar;
 
@@ -31,12 +34,13 @@ public class MainActivity extends AppCompatActivity {
         Button button_toolbar = (Button) findViewById(R.id.button_example_toolbar);
 
         relative_layout_main = (RelativeLayout) findViewById(R.id.relative_layout_main);
+        final ScaleAnimation viewInScaleAnimation = new ScaleAnimation(1f, 1f, 0f, 1f, Animation.RELATIVE_TO_SELF, 1f, Animation.RELATIVE_TO_SELF, 1f);
+        final ScaleAnimation viewOutScaleAnimation = new ScaleAnimation(1f, 1f, 1f, 0f, Animation.RELATIVE_TO_SELF, 1f, Animation.RELATIVE_TO_SELF, 1f);
 
         button_example_1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                TSnackbar.make(relative_layout_main, "Hello from VSnackBar 1", TSnackbar.LENGTH_LONG)
-                        .show();
+                TSnackbar.make(relative_layout_main, "Hello from VSnackBar 1", TSnackbar.LENGTH_LONG).setAnimation(viewInScaleAnimation, viewOutScaleAnimation).show();
             }
         });
 
@@ -55,6 +59,9 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                 snackbar.setActionTextColor(Color.LTGRAY);
+
+
+                snackbar.setAnimation(viewInScaleAnimation, viewOutScaleAnimation);
                 snackbar.addIcon(R.mipmap.ic_core, 200);
                 View snackbarView = snackbar.getView();
                 snackbarView.setBackgroundColor(Color.parseColor("#555555"));
@@ -79,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                 snackbar.setActionTextColor(Color.WHITE);
+                snackbar.setAnimation(viewInScaleAnimation, viewOutScaleAnimation);
                 View snackbarView = snackbar.getView();
                 snackbarView.setBackgroundColor(Color.parseColor("#0000CC"));
                 TextView textView = (TextView) snackbarView.findViewById(com.androidadvance.topsnackbar.R.id.snackbar_text);
@@ -97,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
                 TSnackbar snackbar = TSnackbar
                         .make(relative_layout_main, "Had a snack at Snackbar  Had a snack at Snackbar  Had a snack at Snackbar Had a snack at Snackbar Had a snack at Snackbar Had a snack at Snackbar", TSnackbar.LENGTH_LONG);
                 snackbar.setActionTextColor(Color.WHITE);
+                snackbar.setAnimation(viewInScaleAnimation, viewOutScaleAnimation);
                 View snackbarView = snackbar.getView();
                 snackbarView.setBackgroundColor(Color.parseColor("#CC00CC"));
                 TextView textView = (TextView) snackbarView.findViewById(com.androidadvance.topsnackbar.R.id.snackbar_text);
@@ -114,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
                 TSnackbar snackbar = TSnackbar
                         .make(relative_layout_main, "Snacking with VectorDrawable", TSnackbar.LENGTH_LONG);
                 snackbar.setActionTextColor(Color.WHITE);
+                snackbar.setAnimation(viewInScaleAnimation, viewOutScaleAnimation);
                 snackbar.setIconLeft(R.drawable.ic_android_green_24dp, 24);
                 View snackbarView = snackbar.getView();
                 snackbarView.setBackgroundColor(Color.parseColor("#CC00CC"));
@@ -132,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
                 TSnackbar snackbar = TSnackbar
                         .make(relative_layout_main, "Snacking Left & Right", TSnackbar.LENGTH_LONG);
                 snackbar.setActionTextColor(Color.WHITE);
+                snackbar.setAnimation(viewInScaleAnimation, viewOutScaleAnimation);
                 snackbar.setIconLeft(R.mipmap.ic_core, 24); //Size in dp - 24 is great!
                 snackbar.setIconRight(R.drawable.ic_android_green_24dp, 48); //Resize to bigger dp
                 snackbar.setIconPadding(8);
@@ -146,7 +157,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         button_toolbar.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View view) {
+            @Override
+            public void onClick(View view) {
                 startActivity(new Intent(MainActivity.this, ToolbarActivityExample.class));
             }
         });
